@@ -1,32 +1,35 @@
 import { FC, useState, useEffect, useRef } from 'react';
 import './index.css';
 import Arrow from './icons/Arrow';
-import { coin, edogsIcon, highVoltage, clickBtn, rocket, trophy, goldenCoins, snail } from './images';
+import { edogsIcon, highVoltage, clickBtn, rocket, trophy, goldenCoins, snail, bone, coinBone } from './images';
 import { BalanceDisplay } from './solana/BalanceDisplay';
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
   WalletModalProvider,
   WalletMultiButton
 } from '@solana/wallet-adapter-react-ui';
+import { Keypair, SystemProgram, Transaction } from '@solana/web3.js';
 // Default styles that can be overridden by your app
 import '@solana/wallet-adapter-react-ui/styles.css';
+import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
 
 
-const EatenCoinsAcc = 'Eatenv68bgYmpGRw3EVbYFkpTcMroM3eJKGZpLxXAmA5';
+const EatenCoinsAccount = 'Eatenv68bgYmpGRw3EVbYFkpTcMroM3eJKGZpLxXAmA5';
 const energyLevel = 10000;
+const energyInterval = 4;
 
 const App: FC = () => {
   //const refBalanceDisplay = useRef(null)
   const { connection } = useConnection();
   const { publicKey } = useWallet();
 
-  const pointsToAdd = useRef(25);
-  const energyStep = useRef(25);
-  const [boost, setBoost] = useState(1);
-  const energyInterval = 4;
+  const pointsToAdd = useRef(2500);
+  const energyStep = useRef(2500);
+  const [energy, setEnergy] = useState(3500);
   const [points, setPoints] = useState(localStorage.points || 0);
   const [level, setLevel] = useState(localStorage.level || 0);
-  const [energy, setEnergy] = useState(3500);
+  const [boost, setBoost] = useState(1);
+  const [isSendCoin, setIsSendCoin] = useState(false)
   const [clicks, setClicks] = useState<{ id: number, x: number, y: number }[]>([]);
 
   const handleClickSlow = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -50,8 +53,15 @@ const App: FC = () => {
     const y = e.clientY - rect.top;
 
     localStorage.points = parseInt(points) + pointsToAdd.current;
+
+    const energyValue = energy + energyStep.current
+    if (energyValue >= energyLevel) {
+      setIsSendCoin(true);
+      setEnergy(energyLevel - 1);
+    } else {
+      setEnergy(energy + energyStep.current);
+    }
     setPoints(localStorage.points);
-    setEnergy(energy + energyStep.current > energyLevel ? energyLevel : energy + energyStep.current);
     setClicks([...clicks, { id: Date.now(), x, y }]);
   };
 
@@ -62,11 +72,16 @@ const App: FC = () => {
   // useEffect hook to restore energy over time
   useEffect(() => {
     const interval = setInterval(() => {
-      setEnergy((prevEnergy) => prevEnergy ? Math.min(prevEnergy - energyInterval, energyLevel) : 0);
+      if (!isSendCoin) {
+        setEnergy((prevEnergy) => {
+          const m = Math.min(prevEnergy - energyInterval, energyLevel);
+          return m > 0 ? m : 0;
+        });
+      }
     }, 200); // Restore 10 energy points every second
 
     return () => clearInterval(interval); // Clear interval on component unmount
-  }, []);
+  }, [isSendCoin]);
 
   return (
     <div className="bg-gradient-main min-h-screenflex flex-col items-center text-white font-medium">
@@ -87,15 +102,15 @@ const App: FC = () => {
         </div>
       </div>
 
-      <main className="w-full relative z-10 min-h-screen flex flex-col items-center text-white">
+      <main className="w-full relative z-10 min-h-screen flex flex-col items-center text-white overflow-hidden">
         <div className="fixed top-0 left-0 w-full px-4 pt-8 z-10 flex flex-col items-center text-white">
           <div className="w-full cursor-pointer">
             {/*<div className="bg-[#1f1f1f] text-center py-2 rounded-xl">
               <p className="text-lg">Join squad <Arrow size={18} className="ml-0 mb-1 inline-block" /></p>
             </div>*/}
           </div>
-          <div className="mt-20 text-5xl font-bold flex items-center">
-            <img src={coin} width={44} height={44} />
+          <div className="mt-20 -ml-10 text-5xl font-bold flex items-center">
+            <img src={coinBone} width={56} />
             <span className="ml-2">{points.toLocaleString()}</span>
           </div>
           <div className="text-base mt-2 flex items-center">
@@ -153,14 +168,15 @@ const App: FC = () => {
             {clicks.map((click) => (
               <div
                 key={click.id}
-                className="absolute text-5xl font-bold opacity-0"
+                className="absolute text-5xl font-bold opacity-0 whitespace-nowrap flex align-items"
                 style={{
                   top: `${click.y - 42}px`,
-                  left: `${click.x - 28}px`,
+                  left: `${click.x - 60}px`,
                   animation: `float 1s ease-out`
                 }}
                 onAnimationEnd={() => handleAnimationEnd(click.id)}
               >
+                <img className='mr-2' src={bone} alt='' width='54'/>
                 {pointsToAdd.current}
               </div>
             ))}

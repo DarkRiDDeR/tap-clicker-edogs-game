@@ -1,4 +1,3 @@
-import bear from "./bear.png";
 import coin from "./coin.png";
 import edogsIcon from "./edogs-icon.svg";
 import solIcon from "./solana-icon.svg";
@@ -8,9 +7,11 @@ import trophy from "./trophy.png";
 import goldenCoins from "./golden-coins.jpg"
 import snail from "./snail.png"
 import highVoltage from "./high-voltage.png"
+import bone from "./bone-white.webp"
+import boneGold from "./bone-gold.webp"
+import coinBone from "./coin-bone.webp"
 
 export {
-    bear,
     coin,
     edogsIcon,
     solIcon,
@@ -19,5 +20,8 @@ export {
     trophy,
     goldenCoins,
     highVoltage,
-    snail
+    snail,
+    bone,
+    boneGold,
+    coinBone
 }
