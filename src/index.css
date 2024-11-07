@@ -38,7 +38,6 @@ main {
 .block-display {
   display: none;
   position: absolute;
-  z-index: 20;
   top: 0;
   right: 0;
   bottom: 0;
@@ -59,6 +58,14 @@ main {
   font-family: 'DM Sans', 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   flex: 1;
 }
-.wallet-adapter-dropdown {
-  margin: 0 auto;
+.wallet {
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+.wallet.active {
+  margin-left: 1rem;
+  transform: translateX(0);
+}
+.wallet .wallet-adapter-button-trigger {
+  background-color: #452593;;
 }

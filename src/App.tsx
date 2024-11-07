@@ -1,42 +1,47 @@
-import { FC, useState, useEffect, useRef } from 'react';
-import './index.css';
-import Arrow from './icons/Arrow';
-import { edogsIcon, highVoltage, clickBtn, rocket, trophy, goldenCoins, snail, bone, coinBone } from './images';
-import { BalanceDisplay } from './solana/BalanceDisplay';
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import {
-  WalletModalProvider,
-  WalletMultiButton
-} from '@solana/wallet-adapter-react-ui';
-import { Keypair, SystemProgram, Transaction } from '@solana/web3.js';
-// Default styles that can be overridden by your app
-import '@solana/wallet-adapter-react-ui/styles.css';
-import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
+import { FC, useState, useEffect, useRef } from 'react'
+import './index.css'
+import '@solana/wallet-adapter-react-ui/styles.css'
+import { edogsIcon, highVoltage, clickBtn, rocket, trophy, goldenCoins, snail, bone, coinBone } from './images'
+import { useConnection, useWallet } from "@solana/wallet-adapter-react"
+import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui'
+import { PublicKey } from '@solana/web3.js'
+import { BalanceDisplay } from './solana/BalanceDisplay'
+import sendToken from './solana/sendToken'
+import { Clipboard } from './Clipboard'
 
 
-const EatenCoinsAccount = 'Eatenv68bgYmpGRw3EVbYFkpTcMroM3eJKGZpLxXAmA5';
-const energyLevel = 10000;
+const mintAddr = "mnt6Lp5aBWL6FD5QJx3CADTsqrs2vRjHGze6XtidDka";
+const mintPB = new PublicKey(mintAddr);
+const mintDecimals = 1000000; // min 0,000001
+const freezAddr= 'Eatenv68bgYmpGRw3EVbYFkpTcMroM3eJKGZpLxXAmA5';
+const freezPB= new PublicKey(freezAddr);
+const energyLevel = 6500;
 const energyInterval = 4;
 
 const App: FC = () => {
   //const refBalanceDisplay = useRef(null)
-  const { connection } = useConnection();
-  const { publicKey } = useWallet();
+  const { connection } = useConnection()
+  const { publicKey, wallet } = useWallet()
+  const isWalletConnected = () => connection && publicKey
 
-  const pointsToAdd = useRef(2500);
-  const energyStep = useRef(2500);
-  const [energy, setEnergy] = useState(3500);
+  const pointsToAdd = useRef(48);
+  const energyStep = useRef(48);
+  
+  const [energy, setEnergy] = useState(2000);
   const [points, setPoints] = useState(localStorage.points || 0);
+  const [activePoints, setActivePoints] = useState(0);
   const [level, setLevel] = useState(localStorage.level || 0);
   const [boost, setBoost] = useState(1);
   const [isSendCoin, setIsSendCoin] = useState(false)
+  const [lastTxid, setLastTxid] = useState('')
   const [clicks, setClicks] = useState<{ id: number, x: number, y: number }[]>([]);
+  const [txid, setTxid] = useState('') 
 
   const handleClickSlow = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     if (boost > 1) {
-      energyStep.current = Math.round(25 * Math.sqrt(boost - 1));
-      pointsToAdd.current = 25 * (boost - 1);
-      setBoost(boost - 1);
+      energyStep.current = Math.round(25 * Math.sqrt(boost - 1))
+      pointsToAdd.current = 25 * (boost - 1)
+      setBoost(boost - 1)
     }
   };
   const handleClickBoost = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -53,17 +58,29 @@ const App: FC = () => {
     const y = e.clientY - rect.top;
 
     localStorage.points = parseInt(points) + pointsToAdd.current;
+    setPoints(localStorage.points);
+    setActivePoints(activePoints + pointsToAdd.current)
+    setClicks([...clicks, { id: Date.now(), x, y }]);
 
     const energyValue = energy + energyStep.current
     if (energyValue >= energyLevel) {
       setIsSendCoin(true);
-      setEnergy(energyLevel - 1);
+      setEnergy(energyLevel);
+      if (wallet && isWalletConnected()) {
+        (() => {
+          //txid.current = sendToken(connection, wallet, publicKey, freezPB, mintPB, activePoints * mintDecimals)
+          localStorage.level = parseInt(level) + 1;
+          setLevel(localStorage.level);
+        })()
+      }
     } else {
       setEnergy(energy + energyStep.current);
     }
-    setPoints(localStorage.points);
-    setClicks([...clicks, { id: Date.now(), x, y }]);
   };
+
+  const handleClickOkLevelWin = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => { 
+    setTxid('')
+  }
 
   const handleAnimationEnd = (id: number) => {
     setClicks((prevClicks) => prevClicks.filter(click => click.id !== id));
@@ -72,7 +89,7 @@ const App: FC = () => {
   // useEffect hook to restore energy over time
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isSendCoin) {
+      if (isWalletConnected() && !isSendCoin) {
         setEnergy((prevEnergy) => {
           const m = Math.min(prevEnergy - energyInterval, energyLevel);
           return m > 0 ? m : 0;
@@ -81,7 +98,7 @@ const App: FC = () => {
     }, 200); // Restore 10 energy points every second
 
     return () => clearInterval(interval); // Clear interval on component unmount
-  }, [isSendCoin]);
+  }, [isSendCoin, isWalletConnected]);
 
   return (
     <div className="bg-gradient-main min-h-screenflex flex-col items-center text-white font-medium">
@@ -92,13 +109,13 @@ const App: FC = () => {
       </div>
       
       <div className="absolute w-full mt-4 flex z-30">
-        <div className='mx-4'>
+        <div className={'wallet mx-4 ease-in-out duration-300' + (connection && publicKey ? ' active' : '')}>
           <WalletModalProvider>
             <WalletMultiButton />
           </WalletModalProvider>
         </div>
         <div className="balance absolute right-4 w-34">
-          <BalanceDisplay />
+          <BalanceDisplay tokenPB={mintPB} txid={txid}/>
         </div>
       </div>
 
@@ -115,7 +132,7 @@ const App: FC = () => {
           </div>
           <div className="text-base mt-2 flex items-center">
             <img src={trophy} width={24} height={24} />
-            <span className="ml-1">Level {level}</span>
+            <span className="ml-1">Level <b>{level}</b></span>
           </div>
         </div>
 
@@ -184,19 +201,21 @@ const App: FC = () => {
         </div>
 
       </main>
-      <div className={(connection && publicKey ? "" : "active") + " block-display flex items-center justify-center rounded-xl"}>
-        <div className="block-display-content text-center m-4">
+      <div className={(isWalletConnected() ? "" : "active") + " block-display flex items-center justify-center z-20"}>
+        <div className="block-display-content rounded-lg text-center m-4">
           <img className='w-full rounded-t-xl' src={goldenCoins} />
           <div className='p-4 mb-2 bg-gradient-to-b from-[#060605] to-50%'>
             <p>
               <b>
-                The most honest tap clicker. Click and eat coins!
+              The most honest tap-clicker<br />
+              Click and get coins. Level up!
               </b>
             </p>
-            <p>
-              Buy <span className='text-[#b1ccff]'>$EDogs</span> on <a target='_blank' href='https://raydium.io/swap/?inputMint=sol&outputMint=mnt6Lp5aBWL6FD5QJx3CADTsqrs2vRjHGze6XtidDka' className='underline '>Radium DEX</a>
+            <p className='my-4'>
+              <a target='_blank' href='https://raydium.io/swap/?inputMint=sol&outputMint=mnt6Lp5aBWL6FD5QJx3CADTsqrs2vRjHGze6XtidDka' className='underline inline-block'>
+                Buy <span className='text-[#b1ccff]'>$EDogs</span> on Radium DEX
+              </a>
             </p>
-            <br />
             <p>
               Fix your levels by sending eaten coins to a special fixation account,
               where they will always be as long as the blockchain exists.
@@ -204,7 +223,7 @@ const App: FC = () => {
             <br />
             <p>
               Eaten and fixed coins are withdrawn from circulation,
-              and the price of the <span className='text-[#b1ccff]'>$EDogs</span> coin increases.
+              and the price of the <span className='text-[#b1ccff]'>$EDogs</span> coin increases
             </p>
             <br />
             <p className='flex items-center justify-center'>
@@ -245,10 +264,28 @@ const App: FC = () => {
               </b>
             </p>
             <div className='text-xs mt-6 text-gray-400'>
-              * $EDogs is a meme token based on the Solana blockchain with no intrinsic value or expectation of financial return.
-              There is no formal team or roadmap
+              * $EDogs is a meme token based on the Solana blockchain with no intrinsic value or expectation of financial return
             </div>
           </div>
+        </div>
+      </div>
+      <div className={(txid ? "active " : "") + " block-display flex items-center justify-center z-30"}>
+        <div className="block-display-content flex flex-col items-center rounded-lg text-center m-4 px-4 py-8">
+            <img className='max-w-44 mb-5' src='/public/level-up.webp' alt='' />
+            <p className='text-2xl mb-5'>
+              Level up to {level}!!!
+            </p>
+            <div>
+              <p className='mb-2'>
+                Txid:<br/>
+              </p>
+              <Clipboard txid={txid} />
+            </div>
+            <a className='inline-flex align-middle justify-center mt-4' target='_blank' href={'https://solscan.io/tx/' + txid}>
+              See in Solscan 
+              <img className='w-10 ml-2 h-8 w-8 -mt-1' src='/public/solscan.png' alt=''/>
+            </a>
+            <button className='wallet-adapter-button wallet-adapter-button-trigger mx-auto mt-6' onClick={handleClickOkLevelWin}>OK</button>
         </div>
       </div>
     </div>
