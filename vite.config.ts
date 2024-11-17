@@ -5,6 +5,11 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      crypto: 'crypto-browserify',
+    },
+  },
   plugins: [
     mkcert(),
     react(),
