@@ -1,23 +1,23 @@
-import { ConnectionContext, useConnection, useWallet, WalletContextState } from "@solana/wallet-adapter-react";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { FC, useEffect, useState, Component } from "react";
+import { FC, useEffect, useState } from "react";
 import { edogsIcon, solIcon } from "../images";
 
-const tokenAddress = "mnt6Lp5aBWL6FD5QJx3CADTsqrs2vRjHGze6XtidDka"
 
-export const BalanceDisplay: FC = () => {
+export const BalanceDisplay: FC<{tokenPB: PublicKey, txid: string}> = ({tokenPB, txid}) => {
   const [balance, setBalance] = useState(0);
   const [balanceToken, setBalanceToken] = useState(0);
   const { connection } = useConnection();
   const { publicKey } = useWallet();
 
   useEffect(() => {
+    console.log(txid)
+
     const updateBalance = async () => {
       if (connection && publicKey) {
         //console.error("Wallet not connected or connection unavailable");
 
         try {
-          const tokenAccount = new PublicKey(tokenAddress)
           /*connection.onAccountChange(
             publicKey,
             updatedAccountInfo => {
@@ -37,7 +37,7 @@ export const BalanceDisplay: FC = () => {
           balance = Math.round(balance / LAMPORTS_PER_SOL * 1000) / 1000;
           setBalance(balance)
 
-          const response = await connection.getParsedTokenAccountsByOwner(publicKey, {mint: tokenAccount})
+          const response = await connection.getParsedTokenAccountsByOwner(publicKey, {mint: tokenPB})
           setBalanceToken(Math.round(response.value[0].account.data.parsed.info.tokenAmount.uiAmount))
         } catch (error) {
           console.error("Failed to retrieve balance info:", error);
@@ -46,7 +46,7 @@ export const BalanceDisplay: FC = () => {
     };
 
     updateBalance();
-  }, [connection, publicKey]);
+  }, [connection, publicKey, txid]);
 
   if (!publicKey) {
     return ''
