@@ -3,7 +3,7 @@ import * as clipboard from "clipboard-polyfill"
 
 export const Clipboard: FC<{txid: string}> = ({txid}) => {
   const [isCopied, setIsCopied] = useState(false)
-  const button = useRef(null)
+  const button = useRef<HTMLButtonElement>(null)
 
   const handlerClickBtn = () => {
     clipboard.writeText(txid)
@@ -11,7 +11,9 @@ export const Clipboard: FC<{txid: string}> = ({txid}) => {
     setIsCopied(true)
     
     setTimeout(() => {
-      button.current.blur()
+      if (button.current) {
+        button.current.blur()
+      }
     }, 100)
     setTimeout(() => {
       setIsCopied(false)
