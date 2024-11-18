@@ -9,6 +9,10 @@ import { BalanceDisplay } from './solana/BalanceDisplay'
 import sendToken from './solana/sendToken'
 import { Clipboard } from './Clipboard'
 
+interface IError {
+  title: string,
+  text: string
+}
 
 const mintAddr = "mnt6Lp5aBWL6FD5QJx3CADTsqrs2vRjHGze6XtidDka";
 const mintPB = new PublicKey(mintAddr);
@@ -27,24 +31,25 @@ const App: FC = () => {
   const pointsToAdd = useRef(48);
   const energyStep = useRef(48);
   
+  const [clicks, setClicks] = useState<{ id: number, x: number, y: number }[]>([]);
   const [energy, setEnergy] = useState(2000);
   const [points, setPoints] = useState(localStorage.points || 0);
   const [activePoints, setActivePoints] = useState(0);
   const [level, setLevel] = useState(localStorage.level || 0);
   const [boost, setBoost] = useState(1);
-  const [isSendCoin, setIsSendCoin] = useState(false)
-  const [lastTxid, setLastTxid] = useState('')
-  const [clicks, setClicks] = useState<{ id: number, x: number, y: number }[]>([]);
-  const [txid, setTxid] = useState('') 
+  const [isStop, setIsStop] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [txid, setTxid] = useState('')
+  const [error, setError] = useState<IError | null>(null)
 
-  const handleClickSlow = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+  const handleClickSlow = () => {
     if (boost > 1) {
       energyStep.current = Math.round(25 * Math.sqrt(boost - 1))
       pointsToAdd.current = 25 * (boost - 1)
       setBoost(boost - 1)
     }
   };
-  const handleClickBoost = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+  const handleClickBoost = () => {
     energyStep.current = Math.round(25 * Math.sqrt(boost + 1));
     pointsToAdd.current = 25 * (boost + 1);
     setBoost(boost + 1);
@@ -64,13 +69,20 @@ const App: FC = () => {
 
     const energyValue = energy + energyStep.current
     if (energyValue >= energyLevel) {
-      setIsSendCoin(true);
+      setIsStop(true);
       setEnergy(energyLevel);
-      if (wallet && isWalletConnected()) {
-        (() => {
-          //txid.current = sendToken(connection, wallet, publicKey, freezPB, mintPB, activePoints * mintDecimals)
-          localStorage.level = parseInt(level) + 1;
-          setLevel(localStorage.level);
+      setIsLoading(true);
+      if (wallet && publicKey && isWalletConnected()) {
+        (async () => {
+          let result = await sendToken(connection, wallet, publicKey, freezPB, mintPB, activePoints * mintDecimals)
+          if (result.success) {
+            localStorage.level = parseInt(level) + 1;
+            setLevel(localStorage.level);
+            setTxid(result.value)
+          } else {
+            setError({title: 'Transaction confirmation and level up error', text: result.value})
+          }
+          setIsLoading(false)
         })()
       }
     } else {
@@ -78,8 +90,15 @@ const App: FC = () => {
     }
   };
 
-  const handleClickOkLevelWin = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => { 
+  const handleClickOkLevelWin = () => { 
     setTxid('')
+    setIsStop(false)
+    setEnergy(2000)
+    setActivePoints(0)
+  }
+  const handleClickOkError = () => { 
+    setError(null)
+    setIsStop(false)
   }
 
   const handleAnimationEnd = (id: number) => {
@@ -89,7 +108,7 @@ const App: FC = () => {
   // useEffect hook to restore energy over time
   useEffect(() => {
     const interval = setInterval(() => {
-      if (isWalletConnected() && !isSendCoin) {
+      if (isWalletConnected() && !isStop) {
         setEnergy((prevEnergy) => {
           const m = Math.min(prevEnergy - energyInterval, energyLevel);
           return m > 0 ? m : 0;
@@ -98,7 +117,7 @@ const App: FC = () => {
     }, 200); // Restore 10 energy points every second
 
     return () => clearInterval(interval); // Clear interval on component unmount
-  }, [isSendCoin, isWalletConnected]);
+  }, [isStop, isWalletConnected]);
 
   return (
     <div className="bg-gradient-main min-h-screenflex flex-col items-center text-white font-medium">
@@ -211,11 +230,7 @@ const App: FC = () => {
               Click and get coins. Level up!
               </b>
             </p>
-            <p className='my-4'>
-              <a target='_blank' href='https://raydium.io/swap/?inputMint=sol&outputMint=mnt6Lp5aBWL6FD5QJx3CADTsqrs2vRjHGze6XtidDka' className='underline inline-block'>
-                Buy <span className='text-[#b1ccff]'>$EDogs</span> on Radium DEX
-              </a>
-            </p>
+            <br />
             <p>
               Fix your levels by sending eaten coins to a special fixation account,
               where they will always be as long as the blockchain exists.
@@ -225,43 +240,21 @@ const App: FC = () => {
               Eaten and fixed coins are withdrawn from circulation,
               and the price of the <span className='text-[#b1ccff]'>$EDogs</span> coin increases
             </p>
-            <br />
-            <p className='flex items-center justify-center'>
-              <svg className='mr-4' height="64px" width="64px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 366.636 366.636" xmlSpace="preserve">
-                <g>
-                  <g>
-                    <polygon fill="#FFB819" points="7.261,366.636 230.796,262.472 109.313,142.129 "/>
-                    <circle fill="#FFD26C" cx="139.46" cy="232.5" r="27.121"/>
-                    <path fill="#FFD26C" d="M64.791,240.073c7.507,0.439,15.158-2.219,20.866-7.982c10.454-10.552,10.455-27.525,0.076-38.087
-                      L64.791,240.073z"/>
-                    <path fill="#FFD26C" d="M34.985,337.966c-5.319,5.371-7.93,12.403-7.847,19.408l44.797-20.876
-                      C61.238,327.277,45.076,327.78,34.985,337.966z"/>
-                    <path fill="#FFD26C" d="M142.845,283.129c-6.434,6.495-8.903,15.423-7.436,23.792l47.484-22.127
-                      c-0.534-0.634-1.093-1.252-1.693-1.846C170.559,272.407,153.387,272.488,142.845,283.129z"/>
-                    <circle fill="#FFD26C" cx="77.177" cy="286.451" r="27.121"/>
-                    <polygon fill="#004D7A" points="96.306,170.743 202.305,275.748 230.796,262.472 109.313,142.129 		"/>
-                  </g>
-                  <circle fill="#00BCB4" cx="135" cy="86.679" r="18.497"/>
-                  <circle fill="#00BCB4" cx="276.53" cy="235.558" r="18.497"/>
-                  <circle fill="#FFB819" cx="316.74" cy="153.038" r="18.497"/>
-                  <circle fill="#FFB819" cx="176.102" cy="18.497" r="18.497"/>
-                  <circle fill="#D85C72" cx="228.315" cy="181.419" r="18.497"/>
-                  <circle fill="#D85C72" cx="239.536" cy="74.687" r="18.497"/>
-                  <circle fill="#D85C72" cx="334.385" cy="83.179" r="18.497"/>
-                  <path fill="#00BCB4" d="M133.624,143.693c-3.767,0-6.819-3.053-6.819-6.819c0-3.766,3.052-6.819,6.819-6.819
-                    c25.377,0,46.024-20.646,46.024-46.024c0-32.898,26.764-59.662,59.662-59.662c32.897,0,59.661,26.764,59.661,59.662
-                    c0,3.766-3.053,6.818-6.818,6.818c-3.765,0-6.818-3.052-6.818-6.818c0-25.378-20.647-46.024-46.024-46.024
-                    c-25.378,0-46.024,20.646-46.024,46.024C193.285,116.929,166.52,143.693,133.624,143.693z"/>
-                  <path fill="#FFB819" d="M312.259,210.037c-25.978,0-47.115-21.136-47.115-47.115c0-18.459-15.019-33.479-33.478-33.479
-                    c-18.46,0-33.479,15.019-33.479,33.479c0,3.766-3.053,6.818-6.817,6.818c-3.767,0-6.819-3.052-6.819-6.818
-                    c0-25.979,21.136-47.115,47.115-47.115c25.979,0,47.115,21.136,47.115,47.115c0,18.46,15.018,33.478,33.478,33.478
-                    s33.478-15.018,33.478-33.478c0-3.766,3.054-6.818,6.82-6.818c3.764,0,6.817,3.052,6.817,6.818
-                    C359.375,188.901,338.239,210.037,312.259,210.037z"/>
-                </g>
-              </svg>
+            <p className='flex items-center justify-center my-4'>
+              <img className='mr-3' src='/public/confetti.svg' alt='' />
               <b>
                 It's very simple!!!
               </b>
+            </p>
+            <p className='my-4'>
+              <a target='_blank' href='https://raydium.io/swap/?inputMint=sol&outputMint=mnt6Lp5aBWL6FD5QJx3CADTsqrs2vRjHGze6XtidDka' className='inline-block'>
+                Buy <span className='underline text-[#b1ccff]'>$EDogs</span> on Radium DEX
+              </a>
+            </p>
+            <p className='my-4'>
+              <a target='_blank' href='http://edogs.vip' className='inline-block'>
+              Visit site <span className='underline text-[#b1ccff]'>http://edogs.vip</span>
+              </a>
             </p>
             <div className='text-xs mt-6 text-gray-400'>
               * $EDogs is a meme token based on the Solana blockchain with no intrinsic value or expectation of financial return
@@ -271,21 +264,44 @@ const App: FC = () => {
       </div>
       <div className={(txid ? "active " : "") + " block-display flex items-center justify-center z-30"}>
         <div className="block-display-content flex flex-col items-center rounded-lg text-center m-4 px-4 py-8">
-            <img className='max-w-44 mb-5' src='/public/level-up.webp' alt='' />
-            <p className='text-2xl mb-5'>
-              Level up to {level}!!!
+          <img className='max-w-44 mb-5' src='/public/level-up.webp' alt='' />
+          <p className='text-2xl mb-5'>
+            Level up to {level}!!!
+          </p>
+          <div>
+            <p className='mb-2'>
+              Txid:<br/>
             </p>
-            <div>
-              <p className='mb-2'>
-                Txid:<br/>
-              </p>
-              <Clipboard txid={txid} />
-            </div>
-            <a className='inline-flex align-middle justify-center mt-4' target='_blank' href={'https://solscan.io/tx/' + txid}>
-              See in Solscan 
-              <img className='w-10 ml-2 h-8 w-8 -mt-1' src='/public/solscan.png' alt=''/>
-            </a>
-            <button className='wallet-adapter-button wallet-adapter-button-trigger mx-auto mt-6' onClick={handleClickOkLevelWin}>OK</button>
+            <Clipboard txid={txid} />
+          </div>
+          <a className='inline-flex align-middle justify-center mt-4' target='_blank' href={'https://solscan.io/tx/' + txid}>
+            See in Solscan 
+            <img className='w-10 ml-2 h-8 w-8 -mt-1' src='/public/solscan.png' alt=''/>
+          </a>
+          <button className='wallet-adapter-button wallet-adapter-button-trigger mx-auto mt-6' onClick={handleClickOkLevelWin}>OK</button>
+        </div>
+      </div>
+      <div className={(error ? "active " : "") + " block-display flex items-center justify-center z-30"}>
+        <div className="block-display-content flex flex-col items-center rounded-lg text-center m-4 px-4 py-10">
+          <img className='max-w-16 mb-5' src='/public/error.png' alt='' />
+          {error ? (
+            <>
+              <p className='text-2xl mb-5'>{error.title}</p>
+              <p className='mb-2'>{error.text}</p>
+            </>
+          ) : (
+            <p className='text-2xl mb-5'>{String(error)}</p>
+          )}
+          <button className='wallet-adapter-button wallet-adapter-button-trigger mx-auto mt-6' onClick={handleClickOkError}>Close</button>
+        </div>
+      </div>
+      <div className={(isLoading ? "active " : "") + " block-display flex items-center justify-center z-30"}>
+        <div className="block-display-content flex flex-col items-center rounded-lg text-center m-4 px-4 py-10">
+          {/*<img className='max-w-16 mb-5' src='/public/error.png' alt='' />*/}
+          <svg className="icon-loading w-20 mb-6" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M512.32 282.944c-31.872 0-57.664-25.792-57.664-57.664L454.656 57.984c0-31.808 25.792-57.6 57.664-57.6s57.664 25.792 57.664 57.6l0 167.424C569.984 257.216 544.192 282.944 512.32 282.944zM512.32 1023.616c-20.608 0-37.312-16.704-37.312-37.248l0-209.536c0-20.544 16.704-37.248 37.312-37.248 20.544 0 37.312 16.704 37.312 37.248l0 209.536C549.632 1006.912 532.864 1023.616 512.32 1023.616zM370.368 323.264c-19.328 0-38.08-10.048-48.448-28.032L234.176 145.792C218.752 119.04 227.968 84.8 254.656 69.312c26.752-15.36 60.992-6.272 76.416 20.48L418.752 239.36c15.36 26.752 6.272 60.928-20.48 76.352C389.44 320.832 379.904 323.264 370.368 323.264zM750.016 959.936c-11.776 0-22.848-6.016-29.12-16.768l-106.176-186.176c-9.344-16-3.968-36.544 12.16-45.888 16-9.344 36.48-3.84 45.888 12.16l106.112 186.112c9.344 16 3.904 36.608-12.096 45.952C761.344 958.528 755.648 959.936 750.016 959.936zM269.632 424.896c-8.96 0-17.856-2.176-26.048-6.912l-155.072-89.6C63.488 313.856 54.912 281.984 69.376 257.088c14.4-25.088 46.336-33.6 71.296-19.2l155.072 89.536C320.832 341.76 329.344 373.696 315.008 398.72 305.28 415.552 287.744 424.896 269.632 424.896L269.632 424.896zM928.768 783.168c-4.864 0-9.984-1.344-14.72-3.968l-193.344-112.128c-14.4-8.256-19.136-26.496-10.88-40.768 8.128-14.272 26.496-19.136 40.768-11.008l193.28 112.064c14.4 8.448 19.136 26.496 11.008 40.96C949.248 777.792 939.008 783.168 928.768 783.168L928.768 783.168zM235.264 561.92 48.768 561.92c-26.752 0-48.512-21.76-48.512-48.576s21.696-48.512 48.512-48.512l186.496 0c26.88 0 48.512 21.696 48.512 48.512S262.08 561.92 235.264 561.92zM993.856 542.528 993.856 542.528l-223.744 0c-16.512 0-29.888-13.376-29.888-29.824 0-16.448 13.376-29.824 29.888-29.824l0 0 223.744 0c16.512 0 29.888 13.376 29.888 29.824C1023.744 529.152 1010.368 542.528 993.856 542.528zM108.416 789.44c-15.488 0-30.656-8-38.784-22.464-12.224-21.504-5.056-48.896 16.384-61.12l169.088-96C276.544 597.632 303.808 604.864 316.16 626.304c12.288 21.504 4.992 48.832-16.448 61.056l-169.024 96C123.712 787.456 116.032 789.44 108.416 789.44zM736.576 414.272c-10.24 0-20.288-5.376-25.792-14.912-8.256-14.272-3.328-32.512 11.008-40.768l193.216-112.064c14.336-8.256 32.512-3.392 40.832 10.88 8.256 14.336 3.392 32.512-10.944 40.832L751.36 410.368C746.816 412.992 741.568 414.336 736.576 414.272L736.576 414.272zM278.144 960c-6.912 0-14.016-1.856-20.48-5.504-19.648-11.456-26.304-36.48-14.912-56.128l99.776-173.504c11.456-19.84 36.416-26.304 56.128-15.04 19.712 11.456 26.304 36.48 14.976 56.128l-99.84 173.44C306.176 952.64 292.352 960 278.144 960zM641.728 318.4c-4.928 0-10.048-1.28-14.784-3.968C612.608 306.176 607.808 287.872 615.936 273.536l110.976-192c8.384-14.272 26.496-19.136 40.96-10.944 14.272 8.192 19.136 26.496 10.88 40.768l-110.976 192C662.144 313.024 652.032 318.336 641.728 318.4L641.728 318.4z"  /></svg>
+          <p className='text-center text-xl'>
+            Waiting...
+          </p>
         </div>
       </div>
     </div>

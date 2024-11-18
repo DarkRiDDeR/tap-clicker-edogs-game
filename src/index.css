@@ -69,3 +69,13 @@ main {
 .wallet .wallet-adapter-button-trigger {
   background-color: #452593;;
 }
+
+.icon-loading {
+  vertical-align: middle;
+  fill: #EEE;
+  overflow: hidden;
+  animation: spinner 1s steps(12, end) infinite;
+}
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
