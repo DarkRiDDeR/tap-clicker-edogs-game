@@ -1,76 +1,25 @@
-# Notcoin Clone
+# Tap clicker EDogs Game
 
-This repository contains the initial setup and the final version of the Notcoin clone project, including the basic project structure, necessary images, and icons.
+http://edogs.vip/game
 
-## Overview
+React mini app. The development is based on Notcoin clicker.
 
-This project is a clone of the popular Telegram mini app, Notcoin. The repository provides two branches:
+## Description
 
-1. **Initial Setup**: Provides the foundational structure and assets needed to build the full application.
-2. **Final Version**: The completed application with all functionalities.
+The most honest tap-clicker. Click and get coins. Level up!
 
-## Getting Started
+Fix your levels by sending eaten coins to a special fixation account, where they will always be as long as the blockchain exists.
 
-To get started with either the initial setup or the final version, follow these instructions:
+Eaten and fixed coins are withdrawn from circulation, and the price of the $EDogs coin increases
 
-### Cloning the Repository
+It's very simple!!!
 
-1. **Clone the Repository**:
+Buy $EDogs on Radium DEX https://raydium.io/swap/?inputMint=sol&outputMint=mnt6Lp5aBWL6FD5QJx3CADTsqrs2vRjHGze6XtidDka
 
-    ```bash
-    git clone https://github.com/nikandr-surkov/Notcoin-Telegram-Mini-App-Clone.git
-    cd Notcoin-Telegram-Mini-App-Clone
-    ```
+Visit site http://edogs.vip
 
-### Initial Setup
+*$EDogs is a meme token based on the Solana blockchain with no intrinsic value or expectation of financial return*
 
-2. **Switch to the `initial-setup` Branch**:
+## License
 
-    ```bash
-    git checkout initial-setup
-    ```
-
-3. **Install Dependencies**:
-
-    ```bash
-    npm install
-    ```
-
-4. **Run the Development Server**:
-
-    ```bash
-    npm run dev
-    ```
-
-5. **Open Your Browser**:
-
-    Navigate to localhost to see the initial setup.
-
-### Final Version
-
-2. **Switch to the `final-version` Branch**:
-
-    ```bash
-    git checkout final-version
-    ```
-
-3. **Install Dependencies**:
-
-    ```bash
-    npm install
-    ```
-
-4. **Run the Development Server**:
-
-    ```bash
-    npm run dev
-    ```
-
-5. **Open Your Browser**:
-
-    Navigate to localhost to see the final version of the application.
-
-## Contact
-
-For any inquiries, please contact me in Telegram: [Nikandr Surkov](https://t.me/nikandr_s).
-
+MIT
